@@ -1,0 +1,2790 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>Sudoku Solver 0.78</title>
+	<link href="https://fonts.googleapis.com/css?family=Gloria+Hallelujah" rel="stylesheet"> 
+	<style>
+		body {
+			margin: 0;
+		}
+		h1 {
+			text-align: center;
+			font-family: 'Gloria Hallelujah', cursive;
+			margin: 5px;
+		}
+		table {
+			border-collapse: collapse;
+		}
+		#mainTable {
+			margin: auto;
+			align: center;
+		}
+		#mainTable tr{
+			margin:30px;
+		}
+	
+		td, input[type=text] {
+			text-align: center;
+			color:black;
+		}
+		input[type=text] {
+			width : 30px;
+			height: 30px;
+			font-size: 20px;
+		}
+
+		table.innerTable tr {
+			margin:0px;
+		}
+		#main {
+			background-color:blue;
+			padding: 30px 0px;
+			height : 500px;
+		}
+		#leftDiv {
+			position: absolute;
+			top: 100px;
+			left: 20px;
+			height: 50%;
+			width: 350px;
+			background-color: black;
+			
+		}
+		.rightDivs {
+			position: absolute;
+			right: 0px;
+			width: 300px;
+			background-color: #b0e0e6;
+			margin-right: 20px;
+		}
+		#rightDiv {
+			
+			top: 120px;
+		
+		}
+		#rightDiv2{
+			top: 210px;
+			margin-right: 20px;
+		}
+		#rightDiv3 {
+	
+			background-color: #b0e0e6;
+			top: 300px;
+			margin-right: 20px;
+		}
+		#leftDiv textarea{
+			background-color: black;
+			color: white;
+			resize: none;
+		
+			width: 95%;
+			height: 90%;
+			margin: 10px;
+			
+		}
+		/*
+		input[type=button]{
+			margin: 10px;
+			cursor: pointer;
+			background-color: blue;
+			
+			font-size: 13px;
+		}
+		input[type=button][disabled]{
+			cursor: default;
+			background-color: #000000;
+			color: white;
+		} */
+
+		
+		button {
+			margin: 10px;
+			cursor: pointer;
+			background-color: blue;
+			padding: 2px 15px;
+			color: white;
+			font-size: 13px;
+		}
+
+
+		button[disabled] {
+			cursor: default;
+			background-color: #000000;
+			color: white;
+		}
+		
+		select {
+			cursor: pointer;
+		}
+		
+
+		
+		
+		
+		label{
+			padding-top: 30px;
+			padding-right: 15px;
+		}
+	
+		.lblName {
+		}
+		.lblContainer{
+			display: inline-block;
+			width: 170px;
+			margin-top: 8px;
+		}
+		
+	</style>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="puzzlesScript.js"></script>
+	<script>
+		var global_puzzleArray;
+		var gbl_lenOfRow;
+		var gbl_lenOfCol;
+		var global_keydown = false;
+		var global_iFocus = false;
+		var global_whichFocus;
+		var global_emptyCells;
+		var gbl_possibleValues;
+		
+		var gbl_pvsSet = false;
+		var global_counts;
+		
+		$(document).ready(function(){
+			document.getElementById("secondLayer").disabled = true;
+			
+			$("input").focus(function(){
+			        $(this).css("background-color", "#cccccc");
+					global_iFocus = true;
+					global_whichFocus = this.id;
+			    });
+			$("input").blur(function(){
+				$(this).css("background-color", "#ffffff");
+				global_iFocus = false;
+			    });
+		});
+		$(document).keydown(function(e) {
+			if (global_iFocus == true){
+		
+				if ((e.which < 49 || e.which > 57) && e.which != 8) {
+					e.preventDefault();
+				}
+					// 8 46
+
+					var iF = Number(global_whichFocus[0]);
+					var iL = Number(global_whichFocus[2]);
+					
+					//alert(iF + ' ' + iL + ' ' + e.which);
+					switch(e.which){
+					case 37: // left
+							if (iL === 1){
+								e.preventDefault();
+							}
+							iL = iL - 1;
+							break;
+						case 38: // up
+							if (iF === 1){
+								
+							}
+							iF = iF - 1;
+							break;
+						case 39: // right
+							if (iL === 9){
+								if (iF === 9){
+									iF = 1;
+									iL = 1;
+								} else {
+									iL = 1;
+									iF++;
+								}
+								//autoCellFocus(iF,iL);
+							} else {
+								iL = iL + 1;
+							}
+							
+							break;
+						case 40: //down
+							if (iF === 9){
+								if (iL === 9){
+									iL = 1;
+									iF = 1;
+								} else {
+									iF = 1;
+									iL++;
+								}
+								
+							} else {
+								iF = iF + 1;
+							}
+							break;
+						default: return;
+					}
+					var backToString = String(iF) + "-" + String(iL);
+					document.getElementById(backToString).focus();
+
+						function autoCellFocus(iF,iL){
+							if (iL === 9 && iF !== 9){
+								iL = 1;
+								iF++;
+							} else if (iF === 9) {
+								iF = 1;
+								iL++;
+							}
+							var btString = String(iF) + '-' + String(iL);
+							document.getElementById(btString).focus();
+						}
+			}
+		    
+		});
+	</script>
+</head>
+	<body onload="displayAll()" onresize="setSize()">
+		<script>
+			function displayAll(){
+				var mTable = document.createElement("table");
+				mTable.id = "mainTable";
+				var rowVals = [ [1,2,3],[4,5,6],[7,8,9] ];
+				var colVals = [ [1,2,3],[4,5,6],[7,8,9] ];
+				for (var i = 0; i < 3; i++){
+					var tableRow = document.createElement("tr");
+					for (var j = 0; j < 3; j++){
+						var inrTable = createInnerTable(rowVals[i],colVals[j]);
+						var tableData = document.createElement("td");
+						tableData.appendChild(inrTable);
+						tableRow.appendChild(tableData);
+					}
+					mTable.appendChild(tableRow);
+				}
+				document.getElementById('main').appendChild(mTable);
+				
+				
+				var textArea = document.createElement("textarea");
+				textArea.readOnly = true;
+				document.getElementById('leftDiv').appendChild(textArea);
+				
+				if ( $(window).width() < $(window).height() ){
+					alert("If you are using a phone flip screen to landscape and refresh page");
+				}
+				setSize();
+				
+			
+				function createInnerTable(rows,cols){
+					var inrTable = document.createElement("table");
+					inrTable.className = "innerTable";
+					var rowsLen = rows.length;
+					var colsLen = cols.length;
+					for (var i = 0; i < rowsLen; i++){
+						var tRow = document.createElement("tr");
+						var rowNum = String(rows[i]);
+						for (var j = 0; j < colsLen; j++){
+							var inputTxt = document.createElement("input");
+							inputTxt.type = "text";
+							inputTxt.id = rowNum + '-' + String(cols[j]);
+							inputTxt.setAttribute('maxlength',1);
+							var tableData = document.createElement("td");
+							tableData.appendChild(inputTxt);
+							tRow.appendChild(tableData);
+							inrTable.appendChild(tRow);
+						}
+					}
+					return inrTable;				
+				} // end createInnerTable()
+			} // end displayAll()
+			
+			function setSize(){
+				var sWidth = $(window).width();
+				//alert($(window).width() + " " + $(window).height());
+				var tableWidth = document.getElementById('mainTable').offsetWidth;
+				var asLeft = (sWidth / 2) - (tableWidth / 2);
+				document.getElementById('leftDiv').style.width = (asLeft - 20 - 50) + "px";
+			}
+			
+		</script>
+		<div style= "margin: auto; max-width: 50%; text-align:center">
+			<div style="display: inline-block; padding: 0px 5px; color: white; background-color:rgba(0,0,0,0.5)">
+			<h1>Sudoku Solver</h1>
+			<noscript style="margin: auto; max-width: 50%; text-align:center">
+				Javascript is not enabled in browser!
+				This program cannot run
+			</noscript>
+			</div>
+		</div>
+	
+		<div id="main">
+		
+			<div id="rightDiv" class="rightDivs">
+				<button type="button" class="theButtons" onclick="clearAll()">Clear all</button>
+				&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+				<button type="button" class="theButtons" onclick="resetPuzzle()">Reset Puzzle</button>
+				<div>
+					<button type="button" class="theButtons" onclick="genPuzzleEvilD30()">Generate EvilD30</button>
+					<select id="puzzleSelect" onchange="puzzleSelectionChange(this)">
+						<option value="blank">-Select Puzzle-</option>
+						<option value="Evil">Evil</option>
+						<option value="EvilD31">Evil D31</option>
+						<option value="EvilD24">Evil D24</option>
+						<option value="EvilD23">Evil D23</option>
+						<option value="EvilN30">Evil N30</option>
+						<option value="Extreme">Extreme</option>
+						<option value="1">Puzzle 1</option>
+						<option value="28">Puzzle 28</option>
+						<option value="64">Puzzle 64</option>
+						<option value="65">Puzzle 65</option>
+						<option value="66">Puzzle 66</option>
+						<option value="67">Puzzle 67</option>
+						<option value="68">Puzzle 68</option>
+						<option value="70">Puzzle 70</option>
+						<option value="73">Puzzle 73</option>
+						<option value="74">Puzzle 74</option>
+						<option value="77">Puzzle 77</option>
+						<option value="79">Puzzle 79</option>
+						<option value="80">Puzzle 80</option>
+						<option value="B109">Puzzle B109</option>
+						<option value="B110">Puzzle B110</option>
+						<option value="B111">Puzzle B111</option>
+						<option value="B112">Puzzle B112</option>
+						<option value="B113">Puzzle B113</option>
+						<option value="B115">Puzzle B115</option>
+						<option value="B117">Puzzle B117</option>
+						<option value="B118">Puzzle B118</option>
+						<option value="C76">Puzzle C76</option>
+						<option value="C77">Puzzle C77</option>
+						<option value="C78">Puzzle C78</option>
+						<option value="C79">Puzzle C79</option>
+						<option value="C80">Puzzle C80</option>
+						<option value="C81">Puzzle C81</option>
+						<option value="C82">Puzzle C82</option>
+						<option value="D76">Puzzle D76</option>
+						<option value="D77">Puzzle D77</option>
+						<option value="D78">Puzzle D78</option>
+						<option value="D79">Puzzle D79</option>
+						<option value="D80">Puzzle D80</option>
+						<option value="D81">Puzzle D81</option>
+						<option value="D82">Puzzle D82</option>
+					</select>
+				</div>
+			</div> <!-- end of right div -->
+			<div id="rightDiv2" class="rightDivs">
+			
+				<button type="button" class="theButtons" onclick="runSolve()">Solve First Layer</button>
+				<button type="button" class="theButtons" onclick="solveSingle()">Solve Single First Layer</button>
+			
+			</div>
+			<div id="rightDiv3" class="rightDivs">
+				<button type="button" id="secondLayer" class="cSecLayer" onclick="solveSecond()">Solve Second Layer</button>
+				<div>
+					<!--
+					<input type="button" id ="secondLayer" class="theButtons" onclick="runCheckTwosOnce()" value="c_Twos" />
+					-->
+					<button type="button" id ="roHS" class="cSecLayer runOnce" onclick="runCheckHiddenSingle()">Hidden Single</button>
+					<button type="button" id ="roPP" class="cSecLayer runOnce" onclick="runCheckPointingPair()">Pointing Pair</button>
+					<button type="button" id ="roNP" class="cSecLayer runOnce" onclick="runNakedPairOnce()">Nkd Pair</button>
+					<button type="button" id ="roNS" class="cSecLayer runOnce" onclick="runCheckNakedSingleOnce()">Naked Single</button>
+					<button type="button" id ="roHP" class="cSecLayer runOnce" onclick="checkHiddenPair()">Hidden Pair</button>
+					<button type="button" id ="roHT" class="cSecLayer runOnce" onclick="runHiddenTriple()">Hidden Triple</button>
+					<button type="button" id ="roNT" class="cSecLayer runOnce" onclick="runCheckNkdTriple()">Nkd Triple</button>
+					<button type="button" id ="roXW" class="cSecLayer runOnce" onclick="runCheckXWingOnce()">xWing</button>
+					<button type="button" id ="roSF" class="cSecLayer runOnce" onclick="runSwordfishOnce()">Swordfish</button>
+				</div>
+			</div>
+			<div id="leftDiv">
+			</div>
+			
+		</div> <!-- end main div -->
+		<div id="bottomDiv" style="background-color:rgba(0,0,0,0.8); color: #1aff1a; text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+		 position:fixed ; bottom: 50px; width: 100%; ">
+			<div style= "margin:auto; width: 60%">
+				<div class="lblContainer">
+					<label id="lblhSingle" class="lblCount">0</label>
+					<label class="lblName">Hidden Single</label>
+				</div>
+				<div class="lblContainer">
+					<label id="lblpPair" class="lblCount">0</label>
+					<label class="lblName">Pointing Pair</label>
+				</div>
+				<div class="lblContainer">
+					<label id="lblnPair" class="lblCount">0</label>
+					<label class="lblName">Naked Pair</label>
+				</div>
+				<div class="lblContainer">
+					<label id="lblhPair" class="lblCount">0</label>
+					<label class="lblName">Hidden Pair</label>
+				</div>
+			</div>
+			<div style= "margin:auto; width: 60%">
+				<div class="lblContainer">
+					<label id="lblnTriple" class="lblCount">0</label>
+					<label class="lblName">Naked Triple</label>
+				</div>
+				<div class="lblContainer">	
+					<label id="lblhTriple" class="lblCount">0</label>
+					<label class="lblName">Hidden Triple</label>
+				</div>
+				<div class="lblContainer">
+					<label id="lblxWing" class="lblCount">0</label>
+					<label class="lblName">X Wing</label>
+				</div>
+				<div class="lblContainer">
+					<label id="lblSwordfish" class="lblCount">0</label>
+					<label class="lblName">Swordfish</label>
+				</div>
+			</div>
+		</div>
+		<script>
+						
+			function clearAll(){
+				var inputElements = document.querySelectorAll('input[type="text"]');
+				for (var i = 0; i < inputElements.length; i++){
+					inputElements[i].value = "";
+					inputElements[i].disabled = false;
+					inputElements[i].style.backgroundColor = "white";
+				}
+				var slButtons = document.getElementsByClassName("cSecLayer");
+				for (i = 0; i < slButtons.length; i++){
+					slButtons[i].disabled = true;
+					if (slButtons[i].id == "roSF"){
+						slButtons[i].style.backgroundColor = "black";
+					}
+				}
+				
+				global_emptyCells = 0;
+				document.getElementsByTagName('textarea')[0].innerHTML = "";
+				resetStatLabels();
+			}
+			
+			function resetPuzzle(){
+				genSelectedPuzzle(document.getElementById("puzzleSelect").value);
+			}	
+			
+			function genPuzzleEvilD30(){
+				var genArray = [	["" ,"" ,"1","" ,"" ,"5","" ,"" ,"3"], // - - - | - - - | - - - |
+									["" ,"2","" ,"" ,"8","" ,"" ,"7","" ], // - - - | - - - | - - - |
+									["8","" ,"" ,"3","" ,"" ,"4","" ,"" ], // - - - | - - - | - - - |
+									["6","" ,"" ,"5","" ,"" ,"7","" ,"" ], // - - - | - - - | - - - |
+									["" ,"8","" ,"" ,"3","" ,"" ,"4","" ], // - - - | - - - | - - - |
+									["" ,"" ,"3","" ,"" ,"8","" ,"" ,"2"], // - - - | - - - | - - - |
+									["" ,"" ,"9","" ,"" ,"1","" ,"" ,"7"], // - - - | - - - | - - - |
+									["" ,"3","" ,"" ,"7","" ,"" ,"9","" ], // - - - | - - - | - - - |
+									["7","" ,"" ,"4","" ,"" ,"1","" ,"" ]  // - - - | - - - | - - - |       
+								];
+				displayPuzzle(genArray);
+				global_puzzleArray = genArray;
+			}
+			
+			
+			
+			
+			function setupPVArray9b9(){
+				pvArray = [	[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ],
+							[[] ,[],[] ,[],[],[] ,[],[] ,[] ]     
+				];
+				return pvArray;
+			}
+
+			function displayPuzzle(genArray){
+				clearAll()
+				outputText("");
+				gbl_lenOfRow = genArray[0].length;
+				gbl_lenOfCol = genArray.length;
+				if (gbl_lenOfRow == 9 && gbl_lenOfCol == 9){
+					gbl_possibleValues = setupPVArray9b9();
+				}
+				gbl_pvsSet = false;
+				document.getElementById("secondLayer").disabled = true;
+				
+				var bsRunOnce = document.getElementsByClassName("runOnce");
+				for (var i = 0; i < bsRunOnce.length; i++){
+					bsRunOnce[i].disabled = true;
+				}
+
+				global_emptyCells = gbl_lenOfRow * gbl_lenOfCol;
+				var inElement;
+				//var inputElements = document.querySelectorAll('input[type="text"]');
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					for (var j = 0; j < gbl_lenOfCol; j++){
+						var iF = i + 1;
+						var iL = j + 1;
+						var stringID = String(iF) + "-" + String(iL);
+						inElement = document.getElementById(stringID);
+						if (genArray[i][j] != ""){
+							// if cell is empty, emptycells is one less.
+							global_emptyCells--;
+						}
+						inElement.value = genArray[i][j];
+						if (inElement.value != ""){
+							inElement.disabled = true;
+							inElement.style.backgroundColor = "#e6e6e6";
+						} else {
+							inElement.disabled = false;
+							inElement.style.backgroundColor = "#white";
+							
+						}
+					}
+				}
+				resetStatLabels();
+				global_counts = new counts();
+			}
+			
+			function updatePuzzleArray(row,col,rValue){
+				global_puzzleArray[row][col] = rValue;
+				removeAllPValues(row,col);
+				removePossiblePValueClashes(row,col,rValue);
+				var inputElements = document.querySelectorAll('input[type="text"]');
+				var iF = row + 1;
+				var iL = col + 1;
+				var stringID = String(iF) + "-" + String(iL);
+				inElement = document.getElementById(stringID);
+				inElement.value = rValue;
+				global_emptyCells--;
+			}
+			
+			function runCheckHiddenSingle(){
+				var bool = checkHiddenSingle();
+				outputPossibleValues();
+				outputText("checkHiddenSingle has returned " + bool);
+				if (bool){
+					document.getElementById('lblhSingle').innerHTML = ++global_counts.hSingle;
+				}
+			}
+
+			function runCheckNakedSingleOnce(){
+				var bool = checkNakedSingle();
+				outputPossibleValues();
+				outputText("checkNakedSingle has returned " + bool);
+			}
+			function runCheckPointingPair(){
+				var bool = checkPointingPair();
+				outputPossibleValues();
+				outputText("checkPointingPair has returned " + bool);
+				if (bool){
+					document.getElementById('lblpPair').innerHTML = ++global_counts.pPair;
+				}
+			}
+			function runNakedPairOnce(){
+				var bool = nakedPair();
+				outputPossibleValues();
+				outputText("naked pair has returned " + bool);
+				if (bool){
+					document.getElementById('lblnPair').innerHTML = ++global_counts.nPair;
+				}
+			}
+			
+			function runCheckNkdTriple(){
+				var bool = nkdTriple();
+				outputPossibleValues();
+				outputText("nkdTriple() has returned " + bool);
+				if (bool){
+					document.getElementById('lblnTriple').innerHTML = ++global_counts.nTriple;
+				}
+			}
+			function runHiddenTriple(){
+				var bool = hiddenTriple();
+				outputPossibleValues();
+				outputText("hiddenTriple() has returned " + bool);
+				if (bool){
+					document.getElementById('lblhTriple').innerHTML = ++global_counts.hTriple;
+				}
+			}
+			function runCheckXWingOnce(){
+				var bool = xWing();
+				outputPossibleValues();
+				outputText("checkXWing has returned " + bool);
+				if (bool){
+					document.getElementById('lblxWing').innerHTML = ++global_counts.xWing;
+				}
+			}
+			function runSwordfishOnce(){
+				var bool = swordfish();
+				outputPossibleValues();
+				outputText("swordfish() has returned " + bool);
+				if (bool){
+					document.getElementById('lblSwordfish').innerHTML = ++global_counts.swordFish;
+				}
+				
+			}
+			
+			function counts(){
+				this.hSingle = 0;
+				this.pPair = 0;
+				this.nPair = 0;
+				this.hPair = 0;
+				this.nTriple = 0;
+				this.hTriple = 0;
+				this.xWing = 0;
+				this.swordFish = 0;
+			}
+			
+			
+			function solveSecond(){
+				var countza = 0;
+				var boolHS = false;
+				var bNakedSingle = false;
+				var bNakedPair = false;
+				var bPointPair = false;
+				var bxWing = false;
+				var bHiddenPair = false;
+				var bnTriple = false;
+				var bhTriple = false;
+				var bSwordfish = false;
+				do {
+					boolHS = checkHiddenSingle();
+					if (boolHS){
+						global_counts.hSingle++;
+					}
+					bPointPair = checkPointingPair();
+					if (bPointPair){
+						global_counts.pPair++;
+					}
+					bNakedPair = nakedPair();
+					if (bNakedPair){
+						global_counts.nPair++;
+					}
+					bHiddenPair = checkHiddenPair();
+					if (bHiddenPair){
+						global_counts.hPair++;
+					}
+					
+					bnTriple = nkdTriple();
+					if (bnTriple){
+						global_counts.nTriple++;
+					}
+					bhTriple = hiddenTriple();
+					if (bhTriple){
+						global_counts.hTriple++;
+					}
+					
+					bxWing = xWing();
+					if (bxWing){
+						global_counts.xWing++;
+					}
+					
+				/*	bSwordfish = swordfish();
+					if (bSwordfish){
+						global_counts.swordfish++;
+					}*/
+					do {
+						bNakedSingle = checkNakedSingle();
+					} while (bNakedSingle === true);
+					
+					countza++;
+			
+				} while (boolHS || bNakedSingle || bPointPair || bNakedPair
+					|| bxWing || bHiddenPair || bnTriple || bhTriple);
+				
+				updateStatLabels();
+				
+				outputPossibleValues();
+	
+				outputText("secondLayer executed " + countza + " times");
+				if (global_emptyCells != 0){
+					var errorCount = checkEmptyCellsNoPvs();
+					if (errorCount > 0){
+						alert("ERROR " + errorCount + " empty cells have no possible values"
+						+ "\nthis means an algorithm has made a mistake");
+					}
+					else {
+						var msg = "This puzzle could not be solved\nTry executing SwordFish (CAUTION: swordfish may cause bug as it needs to be rewritten)"
+						alert(msg);
+						outputText(msg);
+						document.getElementById("roSF").disabled = false;
+						document.getElementById("roSF").style.backgroundColor = "#ff6600";
+						
+					}
+					
+					
+				} else {
+					outputText("Puzzle has been Solved");
+				}
+			}
+			
+			function updateStatLabels(){
+				document.getElementById('lblhSingle').innerHTML = global_counts.hSingle;
+				document.getElementById('lblpPair').innerHTML = global_counts.pPair;
+				document.getElementById('lblnPair').innerHTML = global_counts.nPair;
+				document.getElementById('lblhPair').innerHTML = global_counts.hPair;
+				
+				document.getElementById('lblnTriple').innerHTML = global_counts.nTriple;
+				document.getElementById('lblhTriple').innerHTML = global_counts.hTriple;
+				document.getElementById('lblxWing').innerHTML = global_counts.xWing;
+				document.getElementById('lblSwordfish').innerHTML = global_counts.swordFish;
+			}
+			
+			function resetStatLabels(){
+				var lblsCount = document.getElementsByClassName("lblCount");
+				for (var i = 0; i < lblsCount.length; i++){
+					lblsCount[i].innerHTML = 0;
+				}
+			}
+			
+			function outputPossibleValues(){
+				for(var i = 0; i < gbl_lenOfRow; i++){
+					for(var j = 0; j < gbl_lenOfCol; j++){
+						if (global_puzzleArray[i][j] != ""){
+							continue; // no point testing data if there is a value
+							// unless we are also testing user input values, which we're not now
+						}
+						var l = gbl_possibleValues[i][j].length;
+							outputText("Row " + i + " Col " + j + " Possibles: " + gbl_possibleValues[i][j]);
+					}
+				}
+			}
+			
+			function checkEmptyCellsNoPvs(){
+				// check to see if an emptycell has no pvs
+				var errorCount = 0;
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					for (var j = 0; j < gbl_lenOfCol; j++){
+						if (global_puzzleArray[i][j] == ""){
+							// if empty cell check there are pvs
+							var l = gbl_possibleValues[i][j].length;
+							if (l === 0){
+								errorCount++;
+							}
+						}
+					}
+				}
+				return errorCount;
+			}
+			
+			
+			function xWing(){
+				for (var x = 1; x <= 9; x++){
+					if (xWingForValue(x,true)){
+						return true;
+					}
+				}
+				for (var x = 1; x <=9; x++){
+					if (xWingForValue(x,false)){
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function swordfish(){
+				for (var x = 1; x <= 9; x++){
+					if (swordfishForValue(x,true)){
+						return true;
+					}
+				}
+				for (var x = 1; x <= 9; x++){
+					if (swordfishForValue(x,false)){
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function swordfishForValue(value,bRow){
+				var rbool = false;
+				var lenOfRoC;
+				if (bRow){
+					lenOfRoC = gbl_lenOfCol;
+				} else {
+					lenOfRoC = gbl_lenOfRow;
+				}
+				var rocWTwoOThree = [];
+				for (var i = 0; i < lenOfRoC; i++){
+					var numValuesFound = checkNumValuesInRowOrCol(i,value,bRow);
+					if (numValuesFound === 2 || numValuesFound === 3){
+						rocWTwoOThree.push(i);
+					}
+				}
+				var rocLen;
+				if (rocWTwoOThree.length < 3){
+					return false;
+				} else {
+					rocLen = rocWTwoOThree.length;
+				}
+
+				outerloop:
+				for (var i = 0; i < rocLen; i++){
+					var cellsI = getCellsOnRoCwI(rocWTwoOThree[i],value,bRow);
+					for (var j = i + 1; j < rocLen; j++){
+						var cellsJ = getCellsOnRoCwI(rocWTwoOThree[j],value,bRow);
+					
+						for (var k = j + 1; k < rocLen; k++){
+							var cellsK = getCellsOnRoCwI(rocWTwoOThree[k],value,bRow);
+
+								var allCells = mergeCells(cellsI,cellsJ,cellsK);
+								if (eachCellMatchesroc(allCells,bRow)){
+									var bRemovedV = false;
+									
+									if (bRow){
+										var cols = getAllrocOfCells(allCells,false);
+										var rows = [rocWTwoOThree[i],rocWTwoOThree[j],rocWTwoOThree[k]];
+										
+										for (var aa = 0; aa < 3; aa++){
+											if (removeVsOnRowOrCol(cols[aa], value, rows,bRow)){
+												rbool = true;
+											}
+										}
+										if (rbool === true){
+											outputText('SF FOUND! val ' + value + ' in ' + rocWTwoOThree[i] + ' ' + rocWTwoOThree[j] + ' ' + rocWTwoOThree[k] + ' bRow= ' + bRow);
+											break outerloop;
+										}
+									} else {
+										var cols = [rocWTwoOThree[i],rocWTwoOThree[j],rocWTwoOThree[k]];
+										var rows = getAllrocOfCells(allCells,true);
+									
+										for (var aa = 0; aa < 3; aa++){
+											if (removeVsOnRowOrCol(rows[aa], value, cols, bRow)){
+												rbool = true;
+											}
+										}
+										if (rbool === true){
+											outputText('SF FOUND! val ' + value + ' in ' + rocWTwoOThree[i] + ' ' + rocWTwoOThree[j] + ' ' + rocWTwoOThree[k] + ' bRow= ' + bRow);
+											break outerloop;
+										}
+									}
+								}
+
+						} // end k loop
+						
+						
+						
+					} // end of j loop	
+				} // end of i loop
+				return rbool;
+			}
+			
+			function getAllrocOfCells(cells,bRow){
+				var allroc = [];
+				for (var i = 0; i < cells.length; i ++){
+					if (bRow){
+						allroc.push(cells[i].row);
+					} else {
+						allroc.push(cells[i].col);
+					}
+				}
+				return removeDuplicates(allroc);
+			}
+			
+			function mergeCells(cellsI,cellsJ,cellsK){
+				var cells = [];
+				for (var i = 0; i < cellsI.length; i++){
+					cells.push(cellsI[i]);
+				}
+				for (var i = 0; i < cellsJ.length; i++){
+					cells.push(cellsJ[i]);
+				}
+				for (var i = 0; i < cellsK.length; i++){
+					cells.push(cellsK[i]);
+				}
+				return cells;
+			}
+			
+			function eachCellMatchesroc(cells,bRow){
+				for (var i = 0; i < cells.length; i++){
+					var cellToCheck = cells[i];
+					var bFoundMatch = false;
+					for (var j = 0; j < cells.length; j++){
+						if (i !== j){
+							if (bRow){
+								if (cellToCheck.col === cells[j].col){
+									bFoundMatch = true;
+								}
+							} else {
+								//alert('here');
+								if (cellToCheck.row === cells[j].row){
+									bFoundMatch = true;
+								}
+							}
+						}
+					}
+					if (bFoundMatch === false){
+						return false;
+					}
+				}
+				return true;
+			}
+			
+			
+			function getCellsOnRoCwI(roc,value,bRow){
+				var cells = [];
+				var posOne = getRoCofPvInN(roc,value,1,bRow);
+				var posTwo = getRoCofPvInN(roc,value,2,bRow);
+				var posThree = getRoCofPvInN(roc,value,3,bRow);
+				if (bRow){
+					cells = [
+						 cellObj(roc, posOne ,null)
+						,cellObj(roc, posTwo ,null)
+					];
+					if (posThree != null){
+						cells.push(cellObj(roc, posThree ,null));
+					}
+				} else {
+					cells = [
+						cellObj(posOne,roc ,null),
+						cellObj(posTwo,roc ,null)
+					];
+					if (posThree != null){
+						cells.push(cellObj(posThree,roc ,null));
+					}
+				}
+				return cells;
+			}
+
+			
+	/*		function getrocOrPos(cell,bRow){
+				if (bRow){
+					return cell.row;
+				} else {
+					return cell.col;
+				}
+			}*/
+			
+			function cellObj(row,col,pvs){
+				
+				return {row:row, col:col , pvs: pvs};
+			}
+			
+			function bothPosSame(pos1,pos2){
+				if (pos1 === pos2){
+					return true;
+				} else {
+					return false;
+				}
+			}
+			
+			function xWingForValue(x,bRow){
+				var bool = false;
+				var lenOfRoC;
+				if (bRow){
+					lenOfRoC = gbl_lenOfCol;
+				} else {
+					lenOfRoC = gbl_lenOfRow;
+				}
+				var rowsOColsWithTwo = [];
+				for (var i = 0; i < lenOfRoC; i++){
+					var numValuesFound = checkNumValuesInRowOrCol(i,x,bRow);
+					if (numValuesFound == 2){
+						rowsOColsWithTwo.push(i);	
+					}
+				}
+
+				var withTwosLen = rowsOColsWithTwo.length;
+				outerloop:
+				for (var i = 0; i < withTwosLen; i++){
+					var posOneOfFirst = getRoCofPvInN(rowsOColsWithTwo[i],x,1,bRow);
+					var posTwoOfFirst = getRoCofPvInN(rowsOColsWithTwo[i],x,2,bRow);
+
+					for (var j = i + 1; j < withTwosLen; j++){
+						var firstPosition = getRoCofPvInN(rowsOColsWithTwo[j],x,1,bRow);
+						var	secondPosition = getRoCofPvInN(rowsOColsWithTwo[j],x,2,bRow);
+						if (posOneOfFirst === firstPosition && posTwoOfFirst === secondPosition){
+							//alert('XWing Found for value ' + x + " in " + bRow);
+
+								if (removeVsOnRowOrCol(firstPosition,x,rowsOColsWithTwo,bRow)){
+									bool = true;
+								}
+								if (removeVsOnRowOrCol(secondPosition,x,rowsOColsWithTwo,bRow)){
+									bool = true;
+								}
+							
+							if (bool){
+								outputText('X-wing found | Value ' + x);
+								break outerloop;
+							}
+						}
+					}
+				}
+				return bool;
+			}
+			
+			function removeVsOnRowOrCol(rOc,value,exceptions,bRow){
+				var bRemovedPV = false;
+				var lenOfRoC;
+				if (bRow){
+					lenOfRoC = gbl_lenOfCol;
+				} else {
+					lenOfRoC = gbl_lenOfRow;
+				}
+				for (var i = 0; i < lenOfRoC; i++){
+					var bSkip = false;
+					if (bRow){
+						if (global_puzzleArray[i][rOc] !== ""){
+							bSkip = true;
+						}
+					} else {
+						if (global_puzzleArray[rOc][i] !== ""){
+							bSkip = true;
+						}
+					}
+					
+					if (bSkip !== true){
+						var bException = false;
+						for (var j = 0; j < exceptions.length; j++){
+							if (i === exceptions[j]){
+								bException = true;
+							}
+						}
+						if (bException != true){
+							if (bRow){
+								if (removeFromPossibleValues(i,rOc,value)){
+									bRemovedPV = true;
+								}
+							} else {
+								if (removeFromPossibleValues(rOc,i,value)){
+									bRemovedPV = true;
+								}
+							}
+						}
+					} // end of (bSkip !== true)
+				} // end of i loop
+				return bRemovedPV;
+			}
+			
+			function hiddenTriple(){
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					if (hdnTriple(i,true)){
+						return true;
+					}
+				}
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					if (hdnTriple(i,false)){
+						return true;
+					}
+				}
+				var numsOfInnerGrids = getNumsOfInnerGrid();
+				for (var i = 0; i < numsOfInnerGrids; i++){
+					if (hdnTripleIG(i)){
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function hdnTripleIG(ig){
+				var rbool = false;
+				var igRow = getIgRow(ig);
+				var igCol = getIgCol(ig);
+				var possibleValuesInIG = getAllpvsInInnerGrid(igRow,igCol);
+				var pvsInIG2o3Ins = [];
+			
+				for (var x = 0; x < possibleValuesInIG.length; x++){
+					var value = possibleValuesInIG[x];
+					var numValuesFound = checkNumValuesInIG(i,value,igRow,igCol);
+					if (numValuesFound >= 2 && numValuesFound <= 3){
+						pvsInIG2o3Ins.push(value);
+					}
+				}
+				var pvs2o3Len = pvsInIG2o3Ins.length;
+				if (pvs2o3Len < 3){
+					return false;
+				}	
+				outerloop:			
+				for (var x = 0; x < pvs2o3Len - 2; x++){
+					var cellsX = [];
+					cellsX.push(getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[x],1));
+					cellsX.push(getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[x],2));
+					var cell3 = getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[x],3);
+					if (cell3 != null){
+						cellsX.push(cell3);
+					}
+					for (var y = x + 1; y < pvs2o3Len - 1; y++){
+						var cellsY = [];
+						cellsY.push(getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[y],1));
+						cellsY.push(getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[y],2));
+						var cell3 = getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[y],3);
+						if (cell3 != null){
+							cellsY.push(cell3);
+						}
+						var cellsXY = mergeUniqueCells(cellsX,cellsY);
+						if (cellsXY.length <= 3){	
+							for (var z = y + 1; z < pvs2o3Len; z++){
+								var cellsZ = [];
+								cellsZ.push(getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[z],1));
+								cellsZ.push(getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[z],2));
+								var cell3 = getCellFromNInIG(ig,igRow,igCol,pvsInIG2o3Ins[z],3);
+								if (cell3 != null){
+									cellsZ.push(cell3);
+								}
+								var cells = mergeUniqueCells(cellsXY,cellsZ);
+								if (cells.length === 3){
+
+									var htValues = [pvsInIG2o3Ins[x],pvsInIG2o3Ins[y],pvsInIG2o3Ins[z]];
+			
+									if (removePvsFromCells(cells,htValues)){
+										outputText('Hidden Triple in Inner Grid ' + ig + ' Values - ' + htValues[0] + ' ' + htValues[1] + ' ' + htValues[2]);
+										rbool = true;
+										break outerloop;
+									}
+								}
+							}	// end z loop
+						} // end if cellsXY.length <= 3
+					} // end y loop
+				} // end x loop
+				return rbool;
+			}
+			
+			function mergeUniqueCells(cellsX,cellsY){
+				//var cells = cellsX; // don't do!! .. 
+				//						pass by reference will cause changes to cells to change cellsX
+				var cells = [];
+				for (var i = 0; i < cellsX.length; i++){
+					cells.push(cellsX[i]);
+				}
+				for (var i = 0; i < cellsY.length; i++){
+					var cyRow = cellsY[i].row;
+					var cyCol = cellsY[i].col;
+					var bSkip = false;
+					for (var j = 0; j < cells.length; j++){
+						if (cyRow === cells[j].row){
+							if (cyCol === cells[j].col){
+								bSkip = true;
+							}
+						}
+					}
+					if (bSkip === false){
+						cells.push(cellsY[i]);
+					}
+				}
+				return cells;
+			}
+			
+			function hdnTriple(rOc,bRow){
+				var rbool = false;
+				var cellsWithTwo = [];
+				var rocLen;
+				if (bRow){
+					rocLen = gbl_lenOfRow;
+				} else {
+					rocLen = gbl_lenOfCol;
+				}
+				var pvsInRoC = getAllPossibleValuesInRowOrCol(rOc,bRow);
+				var pvsInRoC2Ins = []; // possible values in row that occur ONLY twice
+				for (var x = 0; x < pvsInRoC.length; x++){
+					
+					var value = pvsInRoC[x];
+				
+					var numValuesFound = checkNumValuesInRowOrCol(rOc,value,bRow);
+					
+					if (numValuesFound == 2){
+						pvsInRoC2Ins.push(value);
+					}
+				}
+				var pvs2Len = pvsInRoC2Ins.length;
+				//alert(rOc + " length = "+ pvs2Len);
+				if (pvsInRoC2Ins.length < 3) {
+					return false;
+				}
+				for (var x = 0; x < pvs2Len - 2; x++){
+					var pos1 = getRoCofPvInN(rOc,pvsInRoC2Ins[x],1,bRow);
+					var pos2 = getRoCofPvInN(rOc,pvsInRoC2Ins[x],2,bRow);
+					var cell1 = {pos: pos1, pvs: gbl_possibleValues[rOc][pos1]};
+					var cell2 = {pos: pos2, pvs: gbl_possibleValues[rOc][pos2]};
+					
+					for (var y = x + 1; y < pvs2Len - 1; y++){
+						var pos3 = getRoCofPvInN(rOc,pvsInRoC2Ins[y],1,bRow);
+						var pos4 = getRoCofPvInN(rOc,pvsInRoC2Ins[y],2,bRow);
+						var cell3 = {pos: pos3, pvs: gbl_possibleValues[rOc][pos3]};
+						var cell4 = {pos: pos4, pvs: gbl_possibleValues[rOc][pos4]};
+				
+						for (var z = y + 1; z < pvs2Len; z++){
+							
+							var bSkip = false;
+							var pThree = [cell1,cell2,cell3,cell4,
+								{pos: getRoCofPvInN(rOc,pvsInRoC2Ins[z],1,bRow), pvs: gbl_possibleValues[rOc][getRoCofPvInN(rOc,pvsInRoC2Ins[z],1,bRow)]},
+								{pos: getRoCofPvInN(rOc,pvsInRoC2Ins[z],2,bRow), pvs: gbl_possibleValues[rOc][getRoCofPvInN(rOc,pvsInRoC2Ins[z],2,bRow)]}
+								];
+
+							if (pThree.length === 6){
+								for (var aa = 0; aa < pThree.length; aa++){
+									var number = pThree[aa].pos;
+									var numOccurences = 1;
+									for (var ab = 0; ab < 6; ab++){
+										if (aa !== ab){
+											if (pThree[ab].pos == number){
+												numOccurences++;
+											}
+										}
+									}
+									if (numOccurences !== 2){
+										bSkip = true;
+										//alert('bSkip == true');
+									}
+								}
+								if (bSkip === false){
+									//alert("On col " + rOc + " bskip is false | Values = " + pvsInRoC2Ins[x] + pvsInRoC2Ins[y] + pvsInRoC2Ins[z]);
+									var positionsToRemoveFrom = removeDuplicates(
+										[	pThree[0].pos,
+											pThree[1].pos,
+											pThree[2].pos,
+											pThree[3].pos,
+											pThree[4].pos,
+											pThree[5].pos
+									]);
+									var exceptions = [pvsInRoC2Ins[x],pvsInRoC2Ins[y],pvsInRoC2Ins[z]];
+									if (removeVsOnGivenCells(rOc,positionsToRemoveFrom,exceptions,bRow)){
+												rbool = true;
+												//alert('Hidden Triple - removed values on ' + rOc);
+									}
+								}
+							} else {
+								alert("Error hiddenTriple - array didn't equal 6");
+							}
+							
+						} // end z loop
+					} // end y loop
+				} // end x loop
+				return rbool;
+			}
+			
+			function removeVsOnGivenCells(rOc,positionsToRemoveFrom,exceptions,bRow){
+				var bool = false;
+				var row,col;
+				for (var i = 0; i < positionsToRemoveFrom.length; i++){ // for every position to remove from
+					if (bRow){
+						row = rOc;
+						col = positionsToRemoveFrom[i];
+					} else {
+						row = positionsToRemoveFrom[i];
+						col = rOc;
+					}
+					if (removeFromCellExcept(row,col,exceptions)){
+						bool = true;
+					}					
+				}
+				return bool;
+			}
+			
+			function removeFromCellExcept(row,col,exceptions){
+				var rbool = false;
+				var len = gbl_possibleValues[row][col].length;
+				var pvsToRemove = [];
+				var bExcept;
+				for (var i = 0; i < len; i++){ // for each pv in cell
+					bExcept = false;
+					for (var j = 0; j < exceptions.length; j++){
+						if (gbl_possibleValues[row][col][i] === exceptions[j]){
+							bExcept = true;
+						}
+					}
+					if (!bExcept){ // if not exception
+						pvsToRemove.push(gbl_possibleValues[row][col][i]);
+					}
+				}
+				for (var i = 0; i < pvsToRemove.length; i++){
+					bool = removeFromPossibleValues(row,col,pvsToRemove[i]);
+					if (bool === true){
+						rbool = true;
+					}
+				}
+				return rbool;
+			}
+			
+			//		 getCellFromNInIG(i,igRow,igCol,pvsInIG2Ins[x],1);
+			function getCellFromNInIG(ig,ir,ic,value,n){
+				var numFound = 0;
+				var mtir = ir + 3;
+				var mtic = ic + 3;
+				for (var tir = ir; tir <  mtir; tir++){
+					for (var tic = ic; tic < mtic; tic++){
+						if (global_puzzleArray[tir][tic] != ""){
+							continue;
+						} else {
+							if (possiblesContain(tir,tic,value)){
+								numFound++;
+							}
+						}
+						if (numFound === n){
+							return new cellObj(tir,tic,gbl_possibleValues[tir][tic]);
+						}
+					} // end j loop (columns in IG)
+				}
+			}
+			
+			function getRoCofPvInN(rowOrCol,value,n,bRow){ // n is first, second ,third etc
+				var len;
+				var numFound = 0;
+				if (bRow === true){
+					len = gbl_lenOfCol; // if row then get column
+				} else { // if col
+					len = gbl_lenOfRow;	// if column then get row
+				}
+				for (var i = 0; i < len; i++){
+					if (bRow === true){
+						if (possiblesContain(rowOrCol,i,value)){
+							numFound++;
+						}
+					} else {
+						if (possiblesContain(i,rowOrCol,value)){
+							numFound++;
+						}
+					}
+					if (numFound === n){
+						return i;
+					}
+				}
+			}
+			
+			function nakedPair(){
+				var bool = false;
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					if (nkdPairRoC(i,true)){
+						return true;
+					}
+				}
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					if (nkdPairRoC(i,false)){
+						return true;
+					}
+				}
+				return bool;
+			}
+			
+			function nkdPairRoC(rOc,bRow){
+				var rbool = false;
+				var cellsWithTwo = getCellsNpvs(rOc,2,bRow);
+				if (cellsWithTwo.length < 2){
+					return false;
+				}
+				var len = cellsWithTwo.length;
+				
+				for (var i = 0; i < len - 1; i++){
+					for (var j = i + 1; j < len; j++){
+						var possiblesInTwo = [];
+						for (var ab = 0; ab < 2; ab++){
+							possiblesInTwo.push(cellsWithTwo[i].pvs[ab]);
+							possiblesInTwo.push(cellsWithTwo[j].pvs[ab]);
+						}
+						var pInTwoLen = possiblesInTwo.length;
+						if (nTimesForEachValue(possiblesInTwo,2,pInTwoLen)){
+							//alert('nTimesForEachValue has returned true| In ' + rOc + ' bRow = ' + bRow);
+							var valuesToRemove = removeDuplicates(possiblesInTwo);
+							
+							var exceptions = [cellsWithTwo[i].position,cellsWithTwo[j].position];
+							//alert(valuesToRemove + ' positions - ' + exceptions);
+							for (var aa = 0; aa < valuesToRemove.length; aa++){
+								if (removeVsOnRowOrCol(rOc,valuesToRemove[aa],exceptions,!bRow)){
+									rbool = true;
+								}
+							}
+							if (rbool === true){
+								return rbool;
+							}			
+						} 
+					}
+				}
+				return rbool;
+			}
+			
+			function nTimesForEachValue(possibles,n,posLen){
+				var bSkip = false;
+
+				for (var aa = 0; aa < posLen; aa++){
+					var number = possibles[aa];
+					var numOccurences = 1;
+					for (var ab = 0; ab < posLen; ab++){
+						if (aa !== ab){
+							if (possibles[ab] == number){
+								numOccurences++;
+							}
+						}
+					}
+					if (numOccurences !== n){
+						//alert('numOccurences = ' + numOccurences);
+						bSkip = true;
+					}
+				}
+			
+				if (bSkip){
+					return false;
+				} else {
+					return true;
+				}
+			}
+			
+			//find all cells with n possible values
+			function getCellsNpvs(rOc,n,bRow){
+				var rocLen;
+				if (bRow){
+					rocLen = gbl_lenOfRow;
+				} else {
+					rocLen = gbl_lenOfCol;
+				}
+				var cellsWithN = [];
+				for (var i = 0; i < rocLen; i++){	// find all cells with 2 possible values
+					if (bRow){
+						if (gbl_possibleValues[rOc][i].length === n && global_puzzleArray[rOc][i] == ""){
+							var cell = {position: i, pvs: gbl_possibleValues[rOc][i]};
+							cellsWithN.push(cell);
+						}
+					} else {
+						if (gbl_possibleValues[i][rOc].length === n && global_puzzleArray[i][rOc] == ""){
+							var cell = {position: i, pvs: gbl_possibleValues[i][rOc]};		//alert(cell.pvs);
+							cellsWithN.push(cell);
+						}
+					}
+				}
+				return cellsWithN;
+			}
+			
+			function nkdTriple(){
+				var bool = false;
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					if (nkdTripleRoC(i,true)){
+						return true;
+					}
+				}
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					if (nkdTripleRoC(i,false)){
+						return true;
+					}
+				}
+				var numsOfInnerGrids = getNumsOfInnerGrid();
+				for (var i = 0; i < numsOfInnerGrids; i++){
+					if (nkdTripleIg(i)){
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function nkdTripleIg(ig){
+				var rbool = false;
+				var igRow = getIgRow(ig);
+				var igCol = getIgCol(ig);
+				var cellsWithTwo = getAllCellsWithNpvsIG(igRow,igCol,2);
+				var len = cellsWithTwo.length;
+				if (len < 3){
+					return false;
+				}
+				for (var x = 0; x < len - 2; x++){
+					for (var y = x + 1; y < len - 1; y++){
+				
+						for (var z = y + 1; z < len; z++){
+							var cells = [cellsWithTwo[x],cellsWithTwo[y],cellsWithTwo[z]];
+							if (nCellsNpvs(cells)){
+								if (removePvsFromIgExceptions(ig,cells)){
+									outputText('found nkdTriple in IG ' + ig);
+									return true;
+								}
+							}
+						}
+					}
+				}
+				return false;
+			}
+			
+			function removePvsFromIgExceptions(ig,cells){
+				var rbool = false;
+				var igRow = getIgRow(ig);
+				var igCol = getIgCol(ig);
+				var mIr = igRow + 3;
+				var mIc = igCol + 3;
+				var uniquePvs = removeDuplicates(getPvsOfCells(cells));
+				for (var tir = igRow; tir <  mIr; tir++){
+					for (var tic = igCol; tic < mIc; tic++){
+						if (global_puzzleArray[tir][tic] != ""){
+							continue;
+						} else {
+							var bSkip = false;
+							for (var i = 0; i < cells.length; i++){
+								if (cells[i].row === tir && cells[i].col === tic){
+									bSkip = true;
+								}
+							}
+							if (bSkip){
+								continue;
+							} else {
+								for (var i = 0; i < uniquePvs.length; i++){
+						
+									rbool = removeFromPossibleValues(tir,tic,uniquePvs[i]);
+								}
+								
+							}
+						}
+					} // end j loop (columns in IG)
+				}
+				return rbool;
+			}
+			
+			function nCellsNpvs(cells){
+				var n = cells.length;
+				var possibles = getPvsOfCells(cells);
+				var uniquePvs = removeDuplicates(possibles);
+				if (uniquePvs.length === n){
+					return true;
+				} else {
+					return false;
+				}
+			}
+			
+			function getPvsOfCells(cells){
+				var pvs = [];
+				for (var i = 0; i < cells.length; i++){
+					for (var j = 0; j < cells[i].pvs.length; j++){
+						pvs.push(cells[i].pvs[j]);
+					}
+				}
+				return pvs;
+			}
+			
+			function getAllCellsWithNpvsIG(ir,ic,n){
+				var cellsInIGwN = [];
+				var mtir = ir + 3;
+				var mtic = ic + 3;
+
+				for (var tir = ir; tir <  mtir; tir++){
+					for (var tic = ic; tic < mtic; tic++){
+						if (global_puzzleArray[tir][tic] != ""){
+							continue;
+						} else {
+							if (gbl_possibleValues[tir][tic].length === n){
+								cellsInIGwN.push(new cellObj(tir,tic,gbl_possibleValues[tir][tic]));
+							}
+						}
+					} // end j loop (columns in IG)
+				}
+				return cellsInIGwN;
+			}
+			
+			
+			
+			
+			function nkdTripleRoC(rOc,bRow){
+				var rbool = false;
+				var cellsWithTwo = [];
+				var rocLen;
+				if (bRow){
+					rocLen = gbl_lenOfRow;
+				} else {
+					rocLen = gbl_lenOfCol;
+				}
+				for (var i = 0; i < rocLen; i++){	// find all cells with 2 possible values
+					if (bRow){
+						if (gbl_possibleValues[rOc][i].length === 2 && global_puzzleArray[rOc][i] == ""){
+							var cell = {position: i, pvs: gbl_possibleValues[rOc][i]};
+							cellsWithTwo.push(cell);
+						}
+					} else {
+						if (gbl_possibleValues[i][rOc].length === 2 && global_puzzleArray[i][rOc] == ""){
+							var cell = {position: i, pvs: gbl_possibleValues[i][rOc]};		//alert(cell.pvs);
+							cellsWithTwo.push(cell);
+						}
+					}
+					
+				}
+				if (cellsWithTwo.length < 3){
+					return false;
+				}
+				var len = cellsWithTwo.length;
+				for (var i = 0; i < len - 2; i++){
+					for (var j = i + 1; j < len - 1; j++){
+						for (var k = j + 1; k < len; k++){
+				
+							var bSkip = false;
+							var possiblesInThree = [];
+							for (var ab = 0; ab < 2; ab++){
+								possiblesInThree.push(cellsWithTwo[i].pvs[ab])
+								possiblesInThree.push(cellsWithTwo[j].pvs[ab])
+								possiblesInThree.push(cellsWithTwo[k].pvs[ab])
+							}
+						
+							if (possiblesInThree.length === 6){
+								for (var aa = 0; aa < 6; aa++){
+									var number = possiblesInThree[aa];
+									var numOccurences = 1;
+									for (var ab = 0; ab < 6; ab++){
+										if (aa !== ab){
+											if (possiblesInThree[ab] == number){
+												numOccurences++;
+											}
+										}
+									}
+									if (numOccurences !== 2){
+										bSkip = true;
+									}
+								}
+							
+								if (bSkip === false){
+									var exceptions = [cellsWithTwo[i].position, cellsWithTwo[j].position, cellsWithTwo[k].position];
+									var valuesToRemove = removeDuplicates(possiblesInThree);
+
+									for (var aa = 0; aa < valuesToRemove.length; aa++){
+										if (removeVsOnRowOrCol(rOc,valuesToRemove[aa],exceptions,!bRow)){	
+											rbool = true;
+										}
+									}			//alert(cellsWithTwo[ab].position[]);
+								}				//alert(cellsWithTwo[i].pvs[ab]);
+							} else {			//arrayContainsValue(collection, value)
+								alert("Naked Triple| array did not equal six, this should not have happened");
+							}
+						}	// end k loop
+					}	//end j loop
+				} // end i loop
+				if (rbool){
+					outputText('Naked Triple Found');
+				}
+				return rbool;
+			}
+			
+			function removeDuplicates(array){
+				var returnArray = [];
+				for (var i = 0; i < array.length; i++){
+					if (!arrayContainsValue(returnArray, array[i])){
+						returnArray.push(array[i]);
+					}
+				}
+				return returnArray;
+			}
+			
+			
+			function checkPointingPair(){
+				var bool = false;
+
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					bool = pointingPairInRow(i,true);
+					if (bool === true){
+						return bool;
+					}
+				}
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					bool = pointingPairInRow(i,false);
+					if (bool === true){
+						return bool;
+					}
+				}
+				return bool;
+			} 
+			
+			function pointingPairInRow(rowOrColNum,bRow){
+				
+				var rbool = false;
+				
+				var possibleValuesInRoC = getAllPossibleValuesInRowOrCol(rowOrColNum,bRow);
+				
+				var pvsInRoCm2Ins = []; // possible values in row that occur ONLY twice
+				
+				for (var x = 0; x < possibleValuesInRoC.length; x++){
+					
+					var value = possibleValuesInRoC[x];
+					
+					var numValuesFound = checkNumValuesInRowOrCol(rowOrColNum,value,bRow);
+			
+					if (numValuesFound >= 2){
+						pvsInRoCm2Ins.push(value);
+					}
+					
+				}
+				pvsM2Len = pvsInRoCm2Ins.length;
+				if (pvsM2Len === 0){
+					return false;
+				}
+				if (bRow === false){
+					//alert(rowOrColNum + ": " + pvsInRoCm2Ins);
+				}			
+				
+				var len;
+				if (bRow === true){
+					len = gbl_lenOfRow;
+				} else {
+					len = gbl_lenOfCol;
+				}
+				outerloop:
+				for (var x = 0; x < pvsM2Len; x++){ // for every value with 2 or more
+					var posOfOccurs = []; // position of occurences
+					for (var i = 0; i < len; i++){
+						if (bRow === true){
+							if (possiblesContain(rowOrColNum,i,pvsInRoCm2Ins[x])){
+								posOfOccurs.push(i); // position saved
+							}
+						} else { // if checking column
+							if (possiblesContain(i,rowOrColNum,pvsInRoCm2Ins[x])){
+								posOfOccurs.push(i);
+							}
+						}
+						
+					}
+					if (bRow === true){ // testing purpose
+						//alert('On Col ' + rowOrColNum + " Value " + pvsInRoCm2Ins + ": Positions " + posOfOccurs);
+					}
+					if (checkIfSameInnerGrid(rowOrColNum,posOfOccurs,bRow)){
+						if (bRow === true){
+						 	if (removePClashesFromInnerGrid2(bRow,pvsInRoCm2Ins[x],rowOrColNum,posOfOccurs)){
+						 		//alert("found a pointing pair in Row - " + rowOrColNum + " Value - " + pvsInRoCm2Ins[x]);
+								rbool = true;
+								break outerloop;
+						 	}
+						} else { // bRow === false			//bool, values, rowPositions, colPositions
+							if (bRow === false){
+								//alert("on same inner grid " + rowOrColNum + " Positions " + posOfOccurs + " Value " + pvsInRoCm2Ins[x]);
+							}
+							if (removePClashesFromInnerGrid2(bRow,pvsInRoCm2Ins[x],posOfOccurs,rowOrColNum)){
+								var rocString;
+								if (bRow){
+									rocString = 'row'
+								} else {
+									rocString = 'col';
+								}
+								outputText("found a pointing pair in " + rocString + " - " + rowOrColNum + "Value - " + pvsInRoCm2Ins[x]);
+								rbool = true;
+								break outerloop;
+							}
+						}
+					}
+				}
+				return rbool;				
+				
+			} 
+			
+			
+			function getNumsOfInnerGrid(){
+				return gbl_lenOfRow; // if puzzle other than 9 * 9 this can be changed
+			}
+			
+			function getMinRowOfGrid(grid){
+				
+			}
+					
+			
+			function checkHiddenPair(){
+				
+				var rbool = false;
+
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					rbool = checkHPinRowOrCol(i,true); // check row for HP
+					if (rbool){
+						return true;
+					}
+				}
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					rbool = checkHPinRowOrCol(i,false);	// check columns for HP
+					if (rbool){
+						return true;
+					}
+				}
+				
+				var numsOfInnerGrids = getNumsOfInnerGrid();
+				for (var i = 0; i < numsOfInnerGrids; i++){
+					rbool = checkHPonIG(i);
+					if (rbool){
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function getIgRow(i){
+				var igRow;
+				if (i < 3){
+					igRow = 0;
+				} else if (i >= 3 && i < 6){
+					igRow = 3;
+				} else if (i >= 6 && i < 9){
+					igRow = 6;
+				}
+				return igRow;
+			}
+			function getIgCol(i){
+				switch (i){
+				case 0:
+				case 3:
+				case 6:
+					igCol = 0;
+					break;
+				case 1:
+				case 4:
+				case 7:
+					igCol = 3;
+					break;
+				case 2:
+				case 5:
+				case 8:
+					igCol = 6;
+				}
+				return igCol;
+			}
+			
+			function checkHPonIG(i){
+				var rbool = false;
+				var igRow = getIgRow(i);
+				var igCol = getIgCol(i);
+				var possibleValuesInIG = getAllpvsInInnerGrid(igRow,igCol);
+
+				var pvsInIG2Ins = [];
+				for (var x = 0; x < possibleValuesInIG.length; x++){
+					var value = possibleValuesInIG[x];
+					var numValuesFound = checkNumValuesInIG(i,value,igRow,igCol);
+					if (numValuesFound === 2){
+						pvsInIG2Ins.push(value);
+					}
+				}
+				var pvs2Len = pvsInIG2Ins.length;
+				outerloop:
+				for (var x = 0; x < pvs2Len; x++){
+					var cellA1 = getCellFromNInIG(i,igRow,igCol,pvsInIG2Ins[x],1);
+					var cellA2 = getCellFromNInIG(i,igRow,igCol,pvsInIG2Ins[x],2);
+					for (var y = x + 1; y < pvs2Len; y++){
+						var cellB1 = getCellFromNInIG(i,igRow,igCol,pvsInIG2Ins[y],1);
+						var cellB2 = getCellFromNInIG(i,igRow,igCol,pvsInIG2Ins[y],2);
+						if (cellA1.row === cellB1.row && cellA1.col === cellB1.col){
+							if (cellA2.row === cellB2.row && cellA2.col === cellB2.col){
+								var xyPossibles = [pvsInIG2Ins[x],pvsInIG2Ins[y]];
+								//alert(cellA1.row + ',' + cellA1.col + ' ' + cellB1.row + ',' + cellB1.col
+									//+ ' ' + cellA2.row + ',' + cellA2.col + ' ' + cellB2.row + ',' + cellB2.col);
+								rbool = removePvsFromCells([cellA1,cellA2],xyPossibles);
+								if (rbool === true){
+									outputText('hidden pair found on inner grid ' + xyPossibles);
+									break outerloop;
+								}
+							}
+						}
+					} // end y loop
+				}
+				return rbool;
+			}
+			
+			function removePvsFromCells(cellsToRemoveFrom,exceptions){
+				var bool = false;		
+				for (var i = 0; i < cellsToRemoveFrom.length; i++){
+					var row = cellsToRemoveFrom[i].row;
+					var col = cellsToRemoveFrom[i].col;
+					bool = removeFromCellExcept(row,col,exceptions);
+				}
+				return bool;
+			}
+			
+			/*function n1NumsInN2Cells(n1,n2,){
+				
+				/*if (possiblesInThree.length === 6){
+					for (var aa = 0; aa < 6; aa++){
+						var number = possiblesInThree[aa];
+						var numOccurences = 1;
+						for (var ab = 0; ab < 6; ab++){
+							if (aa !== ab){
+								if (possiblesInThree[ab] == number){
+									numOccurences++;
+								}
+							}
+						}
+						if (numOccurences !== 2){
+							bSkip = true;
+						}
+					}
+			}*/
+
+			
+			function checkHPinRowOrCol(rowOrColNum,bRow){
+				var bool = false;
+				//var rbool = false;
+				var possibleValuesInRoC = getAllPossibleValuesInRowOrCol(rowOrColNum,bRow);
+				//alert('overhere ' + possibleValuesInRow);
+				var pvsInRoC2Ins = []; // possible values in row that occur ONLY twice
+			
+				for (var x = 0; x < possibleValuesInRoC.length; x++){
+					var value = possibleValuesInRoC[x];
+					
+					var numValuesFound = checkNumValuesInRowOrCol(rowOrColNum,value,bRow);
+			
+					if (numValuesFound == 2){
+						pvsInRoC2Ins.push(value);
+					}
+				}
+				var pvs2Len = pvsInRoC2Ins.length;
+				
+				for (var y = 0; y < pvs2Len; y++){
+					for (var z = y + 1; z < pvs2Len; z++){
+						var valOne = pvsInRoC2Ins[y];
+						var valTwo = pvsInRoC2Ins[z];
+						var positionOfOne, positionOfTwo;
+					
+						var positionOfOne = getRoCofPvInN(rowOrColNum,valOne,1,bRow);
+						var positionOfTwo = getRoCofPvInN(rowOrColNum,valTwo,1,bRow);
+					
+						if (positionOfOne === positionOfTwo){ // if both values are in same cell
+
+							var secondPositionOfOne = getRoCofPvInN(rowOrColNum,valOne,2,bRow);
+							var secondPositionOfTwo = getRoCofPvInN(rowOrColNum,valTwo,2,bRow);
+							
+							if (secondPositionOfOne === secondPositionOfTwo){
+								
+								var positions = [positionOfOne,secondPositionOfOne];
+								var max = 2;
+							/*	if (!cellsInQuestionContainMoreThan(bRow,rowOrColNum,positions,max)){ // if cells DO NOT
+									outputText('pair found but not hidden');
+									continue;
+								}*/
+								var boolRemove1 = false;
+								var boolRemove2 = false;
+								if (bRow === true){
+									boolRemove1 = removeFromCellExcept(rowOrColNum,positionOfOne	  ,[valOne,valTwo]);
+									boolRemove2 = removeFromCellExcept(rowOrColNum,secondPositionOfOne,[valOne,valTwo]);
+									if (boolRemove1 === true || boolRemove2 === true){
+										bool = true;
+										outputText('hidden pair found in Row ' + rowOrColNum + 
+													" " + valOne + " " + valTwo + " " + positionOfOne + " " + secondPositionOfOne);
+									}
+								} else {
+									boolRemove1 = removeFromCellExcept(positionOfOne	  ,rowOrColNum,[valOne,valTwo]);
+									boolRemove2 = removeFromCellExcept(secondPositionOfOne,rowOrColNum,[valOne,valTwo]);
+									if (boolRemove1 === true || boolRemove2 === true){
+										bool = true;
+										//outputText('hidden pair found in Col ' + rowOrColNum + 
+										//			" Values: " + valOne +  " " + valTwo + " Positions: " + positionOfOne + " " + secondPositionOfOne);
+									}
+								}
+								
+							}
+						}
+					}
+				}
+				//alert("Row " + row + " : " + pvsInRow2Ins);
+				return bool;
+			}
+			
+			      // cellsInQuestionContainMoreThan(bRow,rowOrCol,positions,2))
+			function cellsInQuestionContainMoreThan(bRow,rowOrCol,positions,max){
+				var bool, rbool;
+				var pLength = positions.length;
+				if (bRow === true){
+					for (var i = 0; i < pLength; i++){
+						if (gbl_possibleValues[rowOrCol][positions[i]].length > max){
+							return true;	// only need to find one cell which contains for than max (most times 2)
+						}
+					}
+					return false;	// false meaning pair is not hidden
+				} else {
+					for (var i = 0; i < pLength; i++){
+						if (gbl_possibleValues[positions[i]][rowOrCol].length > max){
+							return true;
+						}
+					}
+					return false; // pair on column is not hidden
+				}
+			}
+			
+			//getAllpvsInInnerGrid(igRow,igCol)
+			
+			function getAllpvsInInnerGrid(ir,ic){
+				var pvsInIG = [];
+				var mtir = ir + 3;
+				var mtic = ic + 3;
+				//alert('ir ' + ir + ' ic ' + ic);
+				for (var tir = ir; tir <  mtir; tir++){
+				
+					
+					for (var tic = ic; tic < mtic; tic++){
+						
+						//alert('here1 tir = ' + tir + ' tic = ' + tic);
+						if (global_puzzleArray[tir][tic] != ""){
+							continue;
+							
+						} else {
+						
+							for (var k = 1; k <= 9; k++){
+								if (possiblesContain(tir,tic,k)){
+									if (!arrayContainsValue(pvsInIG,k)){
+										pvsInIG.push(k);
+									}
+								}
+							} // end k loop
+						}
+					} // end j loop (columns in IG)
+				}
+				return pvsInIG;
+			}
+			
+			function getAllPossibleValuesInRowOrCol(rowOrCol,bRow){
+				var pvsInRoC = [];
+				
+				for (var j = 0; j < gbl_lenOfCol; j++){
+					if (bRow === true){
+						if (global_puzzleArray[rowOrCol][j] != ""){
+							continue;
+						} else {
+							for (var k = 1; k <= 9; k++){
+								if (possiblesContain(rowOrCol,j,k)){
+									if (!arrayContainsValue(pvsInRoC,k)){
+										pvsInRoC.push(k);
+									}
+								}
+							}
+						}
+					} else {
+						if (global_puzzleArray[j][rowOrCol] != ""){
+							continue;
+						} else {
+							for (var k = 1; k <= 9; k++){
+								if (possiblesContain(j,rowOrCol,k)){
+									if (!arrayContainsValue(pvsInRoC,k)){
+										pvsInRoC.push(k);
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				return pvsInRoC;
+			}
+			
+			function arrayContainsValue(collection, value){
+				for (var x = 0; x < collection.length; x++){
+					if (collection[x] == value){
+						return true;
+					}
+				}
+				return false;
+			}
+			/*function getCombinationsLenOfTwo(len){
+				return (len * (len - 1)) / 2;
+			}*/
+				
+			
+			function checkNumValuesInIG(i,value,ir,ic){	// ig,value,innerRow,innerCol
+				var valuesFound = 0;
+				var len = gbl_lenOfRow;													/////////// may need to be changed
+				var bFoundIns;
+				var mtir = ir + 3;
+				var mtic = ic + 3;
+				for (var tir = ir; tir <  mtir; tir++){
+					for (var tic = ic; tic < mtic; tic++){
+						if (global_puzzleArray[tir][tic] != ""){
+							continue;
+						} else {
+							bFoundIns = possiblesContain(tir,tic,value);
+							if (bFoundIns === true){
+								valuesFound += 1;
+							}
+						}
+					}
+				}
+				return valuesFound;
+			}
+				
+			function checkNumValuesInRowOrCol(rowOrCol,value,bRow){
+				var valuesFound = 0;
+				var len;
+				if (bRow === true){
+					len = gbl_lenOfCol;
+				} else {
+					len = gbl_lenOfRow;
+				}
+				var bFoundIns;
+				
+				for (var i = 0; i < len; i++){
+					//alert('inere1');
+					if (bRow === true){
+						bFoundIns = possiblesContain(rowOrCol,i,value);
+					} else {
+						bFoundIns = possiblesContain(i,rowOrCol,value);
+					}
+					if (bFoundIns === true){
+						valuesFound += 1;
+					}
+				}
+				return valuesFound;
+			}
+			
+			
+			function removePClashesFromInnerGrid(values,rP,cP){
+				var rbool = false;
+				var bool1 = false;
+				var bool2 = false;
+				var rowMax, rowMin , colMax, colMin;
+				rowMax = getRowMax(rP[0]);
+				rowMin = getRowMin(rP[0]);
+				colMin = getColMin(cP[0]);
+				colMax = getColMax(cP[0]);
+				outerloop:
+				for (i = rowMin; i <= rowMax; i++){
+					for (j = colMin; j <= colMax; j++){
+						if (global_puzzleArray[i][j] != "" || ( (i == rP[0] && j == cP[0]) || (i == rP[1] && j == cP[1]) ) ){
+							continue;
+						} else {
+								bool1 = removeFromPossibleValues(i,j,values[0]);
+								bool2 = removeFromPossibleValues(i,j,values[1]);
+						}
+						if (bool1 == true || bool2 == true){
+							rbool = true;
+							break outerloop;
+						}
+					}
+				}
+				return rbool;
+			}
+				//ool, values, rowPositions, colPositions
+				// (removePClashesFromInnerGrid2(bRow,pvsInRoCm2Ins,posOfOccurs,rowOrColNum)
+			function removePClashesFromInnerGrid2(bRow,value,rowPositions,colPositions){		/////////////////
+				var bool = false;
+				var rbool = false;
+				var rowMax, rowMin , colMax, colMin;
+				if (bRow === true){
+					var row = rowPositions;
+					rowMax = getRowMax(row);
+					rowMin = getRowMin(row);
+					colMin = getColMin(colPositions[0]);
+					colMax = getColMax(colPositions[0]);
+					for (i = rowMin; i <= rowMax; i++){
+						for (j = colMin; j <= colMax; j++){
+							if (global_puzzleArray[i][j] != ""){
+								continue;
+							} 
+							var bDontRemove = false;
+							if (i === row){
+								for (var z = 0; z < colPositions.length; z++){
+									if (j === colPositions[z]){
+										bDontRemove = true;
+									}
+								}
+							}
+							if (bDontRemove === false){
+								bool = removeFromPossibleValues(i,j,value);
+								if (bool === true){
+									rbool = true;
+								}
+							}
+						} // end innerloop
+					} // end of outerloop
+				} else { // if bRow == col
+					var col = colPositions;
+					rowMax = getRowMax(rowPositions[0]);			////////////////////////do here
+					rowMin = getRowMin(rowPositions[0]);
+					colMin = getColMin(col);
+					colMax = getColMax(col);
+					for (i = rowMin; i <= rowMax; i++){
+						for (j = colMin; j <= colMax; j++){
+							if (global_puzzleArray[i][j] != ""){
+								continue;
+							}
+							var bDontRemove = false;
+							if (j === col){
+								for (var z = 0; z < rowPositions.length; z++){
+									if (i === rowPositions[z]){
+										bDontRemove = true;
+									}
+								}
+							}
+							if (bDontRemove === false){
+								bool = removeFromPossibleValues(i,j,value);
+								if (bool === true){
+									rbool = true;
+								}
+							}	
+						} // end inner loop (for col)
+					} // end of outerloop (for row)
+				}
+				return rbool;
+			}
+
+									//(1 arg will have One value the other will have multiple values)
+			function checkIfSameInnerGrid(rowOrColNum,posValues,bRow){
+				var rowMax, rowMin , colMax, colMin;
+				if (bRow === true){ // checking row, multiple col values
+					
+					rowMax = getRowMax(rowOrColNum);
+					rowMin = getRowMin(rowOrColNum);
+					colMin = getColMin(posValues[0]);
+					colMax = getColMax(posValues[0]);
+					
+					var len = posValues.length;
+					for (var i = 1; i < len; i++){
+						if (posValues[i] < colMin || posValues[i] > colMax){
+							return false; // one cell is outside of grid so not all in same grid
+						}
+					}
+					return true;
+				} else {					// checking col, multiple row values
+					//alert("Col " + rowOrColNum + " Rows " + posValues);
+					rowMax = getRowMax(posValues[0]);
+					rowMin = getRowMin(posValues[0]);
+					colMin = getColMin(rowOrColNum);
+					colMax = getColMax(rowOrColNum);
+					var len = posValues.length;
+					for (var i = 1; i < len; i++){
+						//alert("rowMinMax " + rowMin + " " + rowMax + " colMinMax " + colMin + " " + colMax);
+						if (posValues[i] < rowMin || posValues[i] > rowMax){
+							return false; // cell found outside grid
+						}
+					}
+					return true;
+				}	
+			}
+			
+
+			//checkSinglePossRequirement();
+			function checkHiddenSingle(){
+				var rbool = false;
+				outerloop:
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					for (var j = 0; j < gbl_lenOfCol; j++){
+						if (global_puzzleArray[i][j] != ""){
+							continue;
+						} else {
+							//alert(i + " " + j);
+							for (var k = 1; k <= gbl_lenOfRow; k++){
+								if (possiblesContain(i,j,k)){
+									var bool1 = hiddenSingleInRow(i,j,k);
+									if (bool1 == true){
+										outputText('hidden single found (row) Row: ' + i + ' Col: ' + j + ' Value: ' + k);
+										updatePuzzleArray(i,j,k);
+										rbool = true;
+										break outerloop;
+									}
+									var bool2 = hiddenSingleInCol(i,j,k);
+									if (bool2 == true){
+										outputText('hidden single found (col) Row: ' + i + ' Col: ' + j + ' Value: ' + k);
+										updatePuzzleArray(i,j,k);
+										rbool = true;
+										break outerloop;
+									}
+								} else {
+									continue;
+								}
+								
+							} 
+							//alert('here');
+						}
+					}
+				}
+				return rbool;
+			}
+			
+			function hiddenSingleInRow(row,col,value){
+				var bool = false;
+				for (i = 0; i < gbl_lenOfRow; i++){
+					if (global_puzzleArray[row][i] != "" || (i == col)){
+						continue;
+					} else {
+						bool = possiblesContain(row,i,value);
+						if (bool == true){
+							break;
+						}
+					}	
+				}
+				if (bool == true){
+					return false; // not one PV in row
+				} else {
+					return true; // only one PV in row
+				}
+			}
+			
+			function hiddenSingleInCol(row,col,value){
+				var bool = false;
+				for (i = 0; i < gbl_lenOfCol; i++){
+					if (global_puzzleArray[i][col] != "" || (i == row)){
+						continue;
+					} else {
+						bool = possiblesContain(i,col,value);
+						if (bool == true){
+							break;
+						}
+					}	
+				}
+				if (bool == true){
+					return false; // not one PV in row
+				} else {
+					return true; // only one PV in row
+				}
+			}
+			function checkNakedSingle(){
+				var bSinglePVFound = false;
+				outerloop:
+				for (var i = 0; i < gbl_lenOfRow; i++){
+					for (var j = 0; j < gbl_lenOfCol; j++){
+						if (global_puzzleArray[i][j] != ""){
+							continue;
+						} else {
+							var iPossibles = 0;
+							var value;
+							for (var k = 1; k <= gbl_lenOfRow; k++){
+								var bPossibleFound = false;
+								bPossibleFound = possiblesContain(i,j,k);
+								if (bPossibleFound == true){
+									iPossibles++;
+									value = k;
+								}
+							}
+							if (iPossibles == 1){
+								//outputText('NakedSingle found in ' + i + ' ' + j + ' value ' + value);
+								updatePuzzleArray(i,j,value);
+								bSinglePVFound = true;
+								break outerloop;
+							}
+						}
+					}
+				}
+				return bSinglePVFound;
+			}
+			
+			// remove all possible values from given cell
+			function removeAllPValues(row,col){
+				var x = gbl_possibleValues[row][col].length;
+				for (var i = 0; i < x; i++){
+					gbl_possibleValues[row][col][i] = "";
+				}
+			}
+			
+			function checkPossiblesInGrid (row,col,value){
+				var bool = false;
+				var bool1 = false;
+				var bool2 = false;
+				var rbool = false;
+				var rowMax, rowMin , colMax, colMin;
+				rowMax = getRowMax(row);
+				rowMin = getRowMin(row);
+				colMin = getColMin(col);
+				colMax = getColMax(col);
+				var boolMorethanOneRow = checkMoreThanOneRow(value,rowMin,rowMax,colMin,colMax);
+				
+				var boolMorethanOneCol = checkMoreThanOneCol(value,rowMin,rowMax,colMin,colMax);
+				
+				if (boolMorethanOneRow == true && boolMorethanOneCol == false){
+					bool1 = removeVerPValueClashes(col,value,rowMin,rowMax);
+				}
+				if (boolMorethanOneRow == false && boolMorethanOneCol == true){
+					bool2 = removeHorPValueClashes(row,value,colMin,colMax);
+				}
+				if (bool1 == true || bool2 == true){
+					bool = false;
+				}
+				return bool;
+			}
+			
+
+			function possiblesContain(row,col,value){
+				var bool = false;
+				var x = gbl_possibleValues[row][col].length;
+				for (var i = 0; i < x; i++){
+					if (gbl_possibleValues[row][col][i] == value){
+						bool = true;
+						break;
+					}
+				}
+				return bool;
+			}
+
+			
+			function runSolve(){
+				outputText("BEGINNING to solve puzzle, first layer algorithms without candidates");
+				var nSolvedCells = solve(false);
+			
+				gbl_pvsSet = true;
+				
+				outputText(nSolvedCells + " cells solved " + global_emptyCells + " empty cells remaining");
+				if (global_emptyCells > 0){
+					enableSecondLayer();
+				}
+				
+			}
+			
+			function enableSecondLayer(){
+				var btnIds = ["secondLayer","roHS","roPP","roNP","roNS","roHP","roHT","roNT","roXW"];
+				// could have got buttons by class but I don't want swordfish
+				for (var i = 0; i < btnIds.length; i++){
+					document.getElementById(btnIds[i]).disabled = false;
+				}
+				outputText("This puzzle requires more than the first layer of algorithms to complete");
+			}
+			
+			//solveSingle
+			function solveSingle(){
+				var nfoundCell;
+				nFoundCell = solve(true);
+				if (nFoundCell == 0 && global_emptyCells > 0){
+					outputText("Could not solve a cell");
+					enableSecondLayer();
+				} else if (global_emptyCells == 0) {
+					outputText("Puzzle has been solved");
+				} else {
+					outputText("Solved one cell successfully using first layer algorithm");
+				}
+			
+			}
+			
+			// bSolveSingle is true if solving just one cell
+			function solve(bSolveSingle){
+				var nSolvedCells = 0;
+				var bFound;
+				do {
+					bFound = false;
+					outerloop:
+					for(var i = 0; i < gbl_lenOfRow; i++){
+						for(var j = 0; j < gbl_lenOfCol; j++){
+							if (global_puzzleArray[i][j] != ""){
+								continue; // no point testing data if there is a value
+							}
+							for (var k = 1; k <= gbl_lenOfRow; k++){
+								var boolHclash = checkHorizontal(i,k); // if horizontal clash is found we will get true;
+								if (boolHclash == true){	
+									continue; // go to next cycle, no point checking further if clash found
+								}
+								var boolVclash = checkVertical(j,k);
+								if (boolVclash == true){		
+									continue;
+								}
+								var boolinnerGridClash = checkInnerGrid(i,j,k);
+								if (boolinnerGridClash == true){
+									continue;
+								}
+
+								var boolrequirement = checkRequirement(i,j,k);
+								if (boolrequirement == true){
+									outputText("Requirement found in Row: " + i + " Col: " + j + " Value: " + k);
+									updatePuzzleArray(i,j,k);
+									nSolvedCells++;
+									bFound = true;
+									break outerloop;
+								}
+							}						
+						}
+					} // end i loop
+				
+				} while (bFound && !bSolveSingle);
+				return nSolvedCells;
+			}
+			
+			function checkRequirement(row, col, cValue){
+				var bool = false;
+				
+				var boolhor = checkRowReq(row, col, cValue);
+				if (boolhor == true){
+					return boolhor; // if row requirement is true return 
+				}
+				var boolver = checkVerReq(row,col,cValue);
+				if (boolver == true){
+					return boolver;
+				}
+				
+				var booligrid = checkIgReq(row,col,cValue);	
+				if (booligrid == true){
+					return booligrid;
+				}
+	
+				var boolSpecial = checkSpecialReq(row,col,cValue);
+				if (boolSpecial == true){
+					return boolSpecial;
+				}
+				return bool;
+			}
+			
+			function checkSpecialReq(row,col,cValue){
+				var possibles = 0;
+				var i = 1;
+				var limit = gbl_lenOfRow;
+				for ( ; i <=limit; i++ ){
+					var boolclash = checkImmediateClash(row,col,i);
+					if (boolclash == true){
+						continue;
+					} else {
+						possibles++;
+					}
+				}
+				if (possibles == 1){
+					return true;
+				} else {
+					return false;
+				} 
+			}
+			
+			function addToPossibleValues(row, col, pValue){
+				var x = gbl_possibleValues[row][col].length;
+				var bool = false;
+				for (var i = 0; i < x; i++){
+					if (pValue == gbl_possibleValues[row][col][i]){
+						bool = true;
+					}
+				}
+				if (bool == false){ // if pValue does not exist in array add it
+					gbl_possibleValues[row][col].push(pValue);
+				}
+			}
+			
+			function removeFromPossibleValues(row,col,pValue){
+				var bool = false;
+				var x = gbl_possibleValues[row][col].length;
+				for (var i = 0; i < x; i++){
+					if (pValue == gbl_possibleValues[row][col][i]){
+						gbl_possibleValues[row][col][i] = "";
+						bool = true;
+						gbl_possibleValues[row][col].sort(function(a, b){return a - b});
+						gbl_possibleValues[row][col].shift();
+					}	
+				}
+				return bool;
+			}
+			
+			function removeHorPValueClashes(row,value,colMin,colMax){
+				var bool = false;
+				for (var j = 0; j < gbl_lenOfRow; j++){
+					if (!checkCellEmpty(row,j)){
+						if (j < colMin || j > colMax){
+							bool = removeFromPossibleValues(row,j,value);
+						}
+					}
+				}
+				return bool;
+			}
+			
+			function removeVerPValueClashes(col,value,rowMin,rowMax){
+				var bool = false;
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					//checkCellEmpty(row,col)
+					if (!checkCellEmpty(i,col)){
+						if (i < rowMin || i > rowMax){
+							bool = removeFromPossibleValues(i,col,value);
+						}
+					}
+				}
+				return bool;
+			}
+			
+			function removePossiblePValueClashes (row,col,cValue){
+				var rowMax, rowMin , colMax, colMin;
+				rowMax = getRowMax(row);
+				rowMin = getRowMin(row);
+				colMin = getColMin(col);
+				colMax = getColMax(col);
+				removeHorPValueClashes(row,cValue,colMin,colMax);
+				removeVerPValueClashes(col,cValue,rowMin,rowMax);
+				var i = rowMin;
+	outerloop:	
+				for ( ; i <= rowMax; i++){
+					var j = colMin;
+					for ( ; j <= colMax; j++){
+						if (checkCellEmpty(row,col)){
+							//if (row != i && col != j){
+								removeFromPossibleValues(i,j,cValue);
+						//	}
+							
+						}
+					}
+				}
+			}
+				
+			
+			function checkRowReq(row,col,cValue){
+				var possibles = 0;
+				for (var j = 0; j < gbl_lenOfRow; j++){
+					var boolNotBlank = checkCellEmpty(row,j);
+					if (boolNotBlank == true){
+						continue;
+					}
+					var boolclash = checkImmediateClash(row,j,cValue);
+					if (boolclash == true){
+						continue;
+					} else {
+						if (gbl_pvsSet == false){
+							addToPossibleValues(row,j,cValue);
+						}
+						
+						possibles++;
+					}
+				}
+				//outputText(possibles + " possible occurances of " + cValue + " on row " + row);
+				if (possibles == 1){
+					//outputText(cValue + " on row " + row);
+					return true;
+				} else {
+					return false;
+				}
+			}
+			
+			function checkVerReq(row,col,cValue){
+				var possibles = 0;
+				for (var i = 0; i < gbl_lenOfCol; i++){
+					var boolNotBlank = checkCellEmpty(i,col);
+					if (boolNotBlank == true){
+						continue;
+					}
+					var boolclash = checkImmediateClash(i,col,cValue);
+					if (boolclash == true){
+						continue;
+					} else {
+						if (gbl_pvsSet == false){
+							addToPossibleValues(i,col,cValue);
+						}
+						possibles++;
+					}
+				}
+				//outputText(possibles + " possible occurances of " + cValue + " on row " + row);
+				if (possibles == 1){
+					//outputText(cValue + " on row " + row);
+					return true;
+				} else {
+					return false;
+				}
+			}
+			
+			function checkIgReq(row,col,cValue){
+				var possibles = 0;
+				var rowMax, rowMin , colMax, colMin;
+				//alert(row + " " + col);
+				rowMax = getRowMax(row);
+				rowMin = getRowMin(row);
+				colMin = getColMin(col);
+				colMax = getColMax(col);
+				var i = rowMin;
+				var j;
+				outerloop:
+				for ( ; i <= rowMax; i++){
+					j = colMin;
+					for ( ; j <= colMax; j++){
+						if (cValue == global_puzzleArray[i][j]){
+							//outputText(cvalue + " i: " + i + " j: " + j + " " + puzzleArray[i][j] + "row-col " + row + " " + col);
+							bool = true;
+							break outerloop;
+						}
+						var boolNotBlank = checkCellEmpty(i,j);
+						if (boolNotBlank == true){
+							continue;
+						}
+						var boolclash = checkImmediateClash(i,j,cValue);
+						if (boolclash == true){
+							continue;
+						} else {
+							possibles++;
+							//addToPossibleValues(i,j,cValue);
+						}
+					}	
+				}
+				//outputText(possibles + " possible occurances of " + cValue + " on row " + row);
+				if (possibles == 1){
+					return true;
+				} else {
+					return false;
+				}
+			}
+			
+			
+			function checkCellEmpty(row,col){
+				var bool;
+				if (global_puzzleArray[row][col] == ""){
+					bool = false;
+				} else {
+					bool = true;
+					//outputText("non empty cell found in: " + row + " " + col);
+				}
+				return bool;
+			}
+			
+			
+			function outputText(str){
+				document.getElementsByTagName('textarea')[0].innerHTML +=str + "\n";
+				// automatic scroll to bottom
+				document.getElementsByTagName('textarea')[0].scrollTop = document.getElementsByTagName('textarea')[0].scrollHeight;
+			}
+			
+			function checkImmediateClash(row,col,cValue){
+				var bool = false;
+				var boolh = checkHorizontal(row,cValue);
+				var boolv = checkVertical(col,cValue);
+				var boolig = checkInnerGrid(row,col,cValue);
+					if (boolh == true || boolv == true || boolig == true){
+						bool = true;
+					}
+				return bool;
+			}
+			
+			function checkHorizontal(row, cvalue){
+								// row - the row we are working with
+								// cvalue is value we are testing
+				var bool = false;
+				for(var j = 0; j < gbl_lenOfRow; j++){	
+					if(cvalue == global_puzzleArray[row][j]){
+						bool = true; // clash found on row
+						break;
+					}		
+				}
+				return bool;
+			}
+			
+			function checkVertical(col, cvalue){
+								// col - the column we are checking
+				var bool = false;
+				for(var i = 0; i < gbl_lenOfCol; i++){
+					if(cvalue == global_puzzleArray[i][col]){
+						bool = true; // clash found in column
+						break;
+					}
+				}
+				return bool;
+			}
+			
+			function checkInnerGrid(row, col, cvalue){
+				var bool = false;
+				var rowMax, rowMin , colMax, colMin;
+				rowMax = getRowMax(row);
+				rowMin = getRowMin(row);
+				colMin = getColMin(col);
+				colMax = getColMax(col);
+
+				var i = rowMin;
+	outerloop:	
+				for ( ; i <= rowMax; i++){
+					var j = colMin;
+					for ( ; j <= colMax; j++){
+						if (cvalue == global_puzzleArray[i][j]){
+							bool = true;
+							break outerloop;
+						}
+					}
+				}
+				return bool;
+			}
+			
+			function getRowMin(row){
+				var rowMin;
+				if (row < 3) {
+					rowMin = 0;
+				}
+				else if (row >= 3 && row <= 5){
+					rowMin = 3;
+				}
+				else if (row > 5) {
+					rowMin = 6;
+				}
+				return rowMin;
+			}
+			function getRowMax(row){
+				var rowMax;
+				if (row < 3) {
+					rowMax = 2;
+				}
+				else if (row >= 3 && row <= 5){
+					rowMax = 5;
+				}
+				else if (row > 5) {
+					rowMax = 8;
+				}
+				return rowMax;
+			}
+			function getColMin(col){
+				var colMin;
+				if (col < 3) {
+					colMin = 0;
+				}
+				else if (col >= 3 && col <= 5){
+					colMin = 3;
+				}
+				else if (col > 5){
+					colMin = 6;
+				}
+				return colMin;
+			}
+			function getColMax(col){
+				var colMax;
+				if (col < 3) {
+					colMax = 2;
+				}
+				else if (col >= 3 && col <= 5){
+					colMax = 5;
+				}
+				else if (col > 5){
+					colMax = 8;
+				}
+				return colMax;
+			}
+		</script>
+	</body>
+</html>
