@@ -442,9 +442,11 @@
 				var slButtons = document.getElementsByClassName("cSecLayer");
 				for (i = 0; i < slButtons.length; i++){
 					slButtons[i].disabled = true;
+					/*
 					if (slButtons[i].id == "roSF"){
 						slButtons[i].style.backgroundColor = "black";
 					}
+					*/
 				}
 				
 				global_emptyCells = 0;
@@ -632,7 +634,7 @@
 				var bHiddenPair = false;
 				var bnTriple = false;
 				var bhTriple = false;
-				var bSwordfish = false;
+				var bSwordFish = false;
 				do {
 					boolHS = checkHiddenSingle();
 					if (boolHS){
@@ -665,10 +667,10 @@
 						global_counts.xWing++;
 					}
 					
-				/*	bSwordfish = swordfish();
-					if (bSwordfish){
-						global_counts.swordfish++;
-					}*/
+					bSwordFish = swordfish();
+					if (bSwordFish){
+						global_counts.swordFish++;
+					}
 					do {
 						bNakedSingle = checkNakedSingle();
 					} while (bNakedSingle === true);
@@ -676,7 +678,7 @@
 					countza++;
 			
 				} while (boolHS || bNakedSingle || bPointPair || bNakedPair
-					|| bxWing || bHiddenPair || bnTriple || bhTriple);
+					|| bxWing || bHiddenPair || bnTriple || bhTriple || bSwordFish);
 				
 				updateStatLabels();
 				
@@ -820,31 +822,37 @@
 									if (bRow){
 										var cols = getAllrocOfCells(allCells,false);
 										var rows = [rocWTwoOThree[i],rocWTwoOThree[j],rocWTwoOThree[k]];
-										
-										for (var aa = 0; aa < 3; aa++){
-											if (removeVsOnRowOrCol(cols[aa], value, rows,bRow)){
-												rbool = true;
+										if (cols.length > 3){
+											continue;
+										} else {
+											for (var aa = 0; aa < 3; aa++){
+												if (removeVsOnRowOrCol(cols[aa], value, rows,bRow)){
+													rbool = true;
+												}
 											}
-										}
-										if (rbool === true){
-											outputText('SF FOUND! val ' + value + ' in ' + rocWTwoOThree[i] + ' ' + rocWTwoOThree[j] + ' ' + rocWTwoOThree[k] + ' bRow= ' + bRow);
-											break outerloop;
+											if (rbool === true){
+												outputText('SF FOUND! val ' + value + ' in ' + rocWTwoOThree[i] + ' ' + rocWTwoOThree[j] + ' ' + rocWTwoOThree[k] + ' bRow= ' + bRow);
+												break outerloop;
+											}
 										}
 									} else {
 										var cols = [rocWTwoOThree[i],rocWTwoOThree[j],rocWTwoOThree[k]];
 										var rows = getAllrocOfCells(allCells,true);
-									
-										for (var aa = 0; aa < 3; aa++){
-											if (removeVsOnRowOrCol(rows[aa], value, cols, bRow)){
-												rbool = true;
+										if (rows.length > 3){
+											continue;
+										} else {
+											for (var aa = 0; aa < 3; aa++){
+												if (removeVsOnRowOrCol(rows[aa], value, cols, bRow)){
+													rbool = true;
+												}
 											}
-										}
-										if (rbool === true){
-											outputText('SF FOUND! val ' + value + ' in ' + rocWTwoOThree[i] + ' ' + rocWTwoOThree[j] + ' ' + rocWTwoOThree[k] + ' bRow= ' + bRow);
-											break outerloop;
-										}
+											if (rbool === true){
+												outputText('SF FOUND! val ' + value + ' in ' + rocWTwoOThree[i] + ' ' + rocWTwoOThree[j] + ' ' + rocWTwoOThree[k] + ' bRow= ' + bRow);
+												break outerloop;
+											}
+										}	
 									}
-								}
+								} // end of if eachCellMatchesroc
 
 						} // end k loop
 						
@@ -2379,8 +2387,8 @@
 			}
 			
 			function enableSecondLayer(){
-				var btnIds = ["secondLayer","roHS","roPP","roNP","roNS","roHP","roHT","roNT","roXW"];
-				// could have got buttons by class but I don't want swordfish
+				var btnIds = ["secondLayer","roHS","roPP","roNP","roNS","roHP","roHT","roNT","roXW","roSF"];
+				// would have been better to get from class, but this way I can see it more clearly
 				for (var i = 0; i < btnIds.length; i++){
 					document.getElementById(btnIds[i]).disabled = false;
 				}
